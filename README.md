@@ -1,5 +1,5 @@
 # PrisonAPI
-working modules for making prison life script (currently on beta version)
+working open source module for making prison life script (currently on beta version)
 # Load API
 ```lua
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Skibidi50-lol/PrisonAPI/refs/heads/main/Api.lua"))()

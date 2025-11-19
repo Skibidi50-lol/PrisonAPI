@@ -3,7 +3,7 @@ working modules for making prison life script
 
 # Functions
 ```lua
-PrisonAPI Configs (change anytime):
+PrisonAPI Configs
 Noclip = true/false
 AutoArrest = true/false
 AutoAttack = true/false

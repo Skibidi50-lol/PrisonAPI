@@ -6,7 +6,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/Skibidi50-lol/PrisonA
 ```
 # Functions
 ```lua
-PrisonAPI Configs
+PrisonAPI Configs (Remember to add PrisonAPI. to all these vars but not the give gun 
 Noclip = true/false
 AutoArrest = true/false
 AutoAttack = true/false

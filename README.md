@@ -2,7 +2,8 @@
 working open source module for making prison life script (currently on beta version)
 # Load API
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Skibidi50-lol/PrisonAPI/refs/heads/main/Api.lua"))()
+--paste the raw into your code
+https://raw.githubusercontent.com/Skibidi50-lol/PrisonAPI/refs/heads/main/Api.lua
 ```
 # Functions
 ```lua

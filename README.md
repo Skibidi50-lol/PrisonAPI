@@ -14,10 +14,10 @@ AutoRespawn = true/false
 TpWalkEnabled = true/false | TpStepSize = 0.25
 Dots.Enabled = true/false | DotSize = 10 | OffsetY = 2
 Aimbot.Enabled = true/false | FOV = 150 | Smoothness = 0.22 | TargetPart = "Head" | TeamCheck = true/false | WallCheck = true/false | ShowFOV = true/false
-TargetKillAura → PrisonAPI:StartTargetKill("Name") / :StopTargetKill()
-TargetArrest → PrisonAPI:StartTargetArrest("Name") / :StopTargetArrest()
+TargetKillAura → PrisonAPI:StartTargetKill("Name") or PrisonAPI:StartTargetKill(Target) / :StopTargetKill()
+TargetArrest → PrisonAPI:StartTargetArrest("Name") or PrisonAPI:StartTargetArrest(Target) / :StopTargetArrest()
 Aimbot → PrisonAPI:StartAimbot() / :StopAimbot()
-GiveGun("M9"/"AK-47"/"Remington 870"/"M4A1") FAL NOT WORK IN THIS
+GiveGun("M9"/"AK-47"/"Remington 870"/"M4A1") or GiveGun(selectedGun) --selected gun must be a gun name | FAL WILL NOT WORK
 --Tp
 PrisonAPI.EscapePrison() → Criminal Base
 PrisonAPI.YardTP() → Yard

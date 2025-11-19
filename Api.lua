@@ -435,35 +435,35 @@ function PrisonAPI:NoAntiJump()
     })
 end
 --workspace
-function PrisonAPI:EscapePrison()
+function PrisonAPI.EscapePrison()
     instantTP(CFrame.new(-927.7, 94.1, 2055.3))
 end
 
-function PrisonAPI:YardTP()
+function PrisonAPI.YardTP()
     instantTP(CFrame.new(791.5, 98, 2498.5))
 end
 
-function PrisonAPI:PoliceRoomTP()
+function PrisonAPI.PoliceRoomTP()
     instantTP(CFrame.new(837.9, 99.8, 2267.3))
 end
 
-function PrisonAPI:CrimBaseTP()
+function PrisonAPI.CrimBaseTP()
     instantTP(CFrame.new(-927.7, 94.1, 2055.3))
 end
 
-function PrisonAPI:DeleteDoors()
+function PrisonAPI.DeleteDoors()
     game.workspace.Doors:Destroy()
 end
 
-function PrisonAPI:DeleteCells()
+function PrisonAPI.DeleteCells()
     game.workspace.Prison_Cellblock:Destroy()
 end
 
-function PrisonAPI:DeleteCellsDoors()
+function PrisonAPI.DeleteCellsDoors()
     game.workspace.CellDoors:Destroy()
 end
 
-function PrisonAPI:Btools()
+function PrisonAPI.Btools()
     backpack = game:GetService("Players").LocalPlayer.Backpack
 
     hammer = Instance.new("HopperBin")
@@ -487,7 +487,7 @@ function PrisonAPI:Btools()
     })
 end
 
-function PrisonAPI:BecomeCriminal()
+function PrisonAPI.BecomeCriminal()
     local plr = game.Players.LocalPlayer
         local char = plr.Character
         if not char or not char:FindFirstChild("HumanoidRootPart") then

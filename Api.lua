@@ -416,7 +416,7 @@ game.Players.LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 --no anti jump
-function PrisonAPI:NoAntiJump()
+function PrisonAPI.NoAntiJump()
     local PL = game:GetService("Players").LocalPlayer
     local PC = pcall
 

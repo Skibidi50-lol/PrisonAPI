@@ -718,5 +718,3 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
-PrisonAPI:StartTargetArrest("broly_frr")

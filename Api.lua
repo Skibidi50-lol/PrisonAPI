@@ -532,62 +532,78 @@ function PrisonAPI:BecomeCriminal()
     savedPosition = nil
 end
 --aimbot
-local Players = game:GetService("Players")
+local Camera = workspace.CurrentCamera
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
-local Camera = Workspace.CurrentCamera
+local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
+-- Use the PrisonAPI table so the toggles actually work
+PrisonAPI.Aimbot.Enabled = PrisonAPI.Aimbot.Enabled or false
+
+local AimbotConnections = {}
+
+-- FOV Circle
 local FOVCircle = Drawing.new("Circle")
 FOVCircle.Thickness = 2
-FOVCircle.NumSides = 70
-FOVCircle.Radius = PrisonAPI.Aimbot.FOV
+FOVCircle.NumSides = 60
 FOVCircle.Filled = false
+FOVCircle.Transparency = 0.8
 FOVCircle.Color = PrisonAPI.Aimbot.FOVColor
-FOVCircle.Transparency = 0.7
-FOVCircle.Visible = PrisonAPI.Aimbot.ShowFOV
+FOVCircle.Radius = PrisonAPI.Aimbot.FOV
+FOVCircle.Visible = false
 
--- Update FOV Circle every frame
-RunService.RenderStepped:Connect(function()
+local function UpdateFOVCircle()
     if PrisonAPI.Aimbot.ShowFOV then
-        FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
-        FOVCircle.Radius = PrisonAPI.Aimbot.FOV
         FOVCircle.Visible = true
+        FOVCircle.Radius = PrisonAPI.Aimbot.FOV
+        FOVCircle.Color = PrisonAPI.Aimbot.FOVColor
+        FOVCircle.Position = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
     else
         FOVCircle.Visible = false
     end
-end)
+end
 
--- Check if enemy (team check)
-local function isEnemy(plr)
-    if not plr or plr == LocalPlayer then return false end
+-- UNIVERSAL Team check (just don't target same team)
+local function IsEnemy(plr)
     if not PrisonAPI.Aimbot.TeamCheck then return true end
+    if plr == LocalPlayer then return false end
     return plr.Team ~= LocalPlayer.Team
 end
 
--- Get best target inside FOV
-local function getBestTarget()
+-- Wall check
+local function CanSee(targetPart)
+    if not PrisonAPI.Aimbot.WallCheck then return true end
+    local rayParams = RaycastParams.new()
+    rayParams.FilterDescendantsInstances = {LocalPlayer.Character or {}}
+    rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+    
+    local result = workspace:Raycast(Camera.CFrame.Position, (targetPart.Position - Camera.CFrame.Position), rayParams)
+    return result == nil or result.Instance:IsDescendantOf(targetPart.Parent)
+end
+
+-- Get best target
+local function GetTarget()
     local closest = nil
-    local closestDist = PrisonAPI.Aimbot.FOV
+    local closestDist = math.huge
     local screenCenter = Vector2.new(Camera.ViewportSize.X/2, Camera.ViewportSize.Y/2)
 
-    for _, plr in pairs(Players:GetPlayers()) do
-        if isEnemy(plr) and plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
-            local part = plr.Character:FindFirstChild(PrisonAPI.Aimbot.TargetPart) or plr.Character:FindFirstChild("Head") or plr.Character:FindFirstChild("HumanoidRootPart")
-            if part then
-                local screenPos, onScreen = Camera:WorldToViewportPoint(part.Position)
-                if onScreen then
-                    local distFromCenter = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
-                    if distFromCenter < closestDist then
-                        local canSee = true
-                        if PrisonAPI.Aimbot.WallCheck then
-                            local ray = Ray.new(Camera.CFrame.Position, (part.Position - Camera.CFrame.Position).Unit * 500)
-                            local hit = Workspace:FindPartOnRayWithIgnoreList(ray, {LocalPlayer.Character})
-                            canSee = (hit and hit:IsDescendantOf(plr.Character))
-                        end
-                        if canSee then
-                            closestDist = distFromCenter
-                            closest = part
+    for _, plr in Players:GetPlayers() do
+        if plr ~= LocalPlayer and IsEnemy(plr) then
+            local char = plr.Character
+            if char and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+                local part = char:FindFirstChild(PrisonAPI.Aimbot.TargetPart) or char:FindFirstChild("Head")
+                if part then
+                    local pos, onScreen = Camera:WorldToViewportPoint(part.Position)
+                    if onScreen then
+                        local screenDist = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
+                        if screenDist <= PrisonAPI.Aimbot.FOV then
+                            if CanSee(part) then
+                                local worldDist = (LocalPlayer.Character.HumanoidRootPart.Position - part.Position).Magnitude
+                                if worldDist < closestDist then
+                                    closestDist = worldDist
+                                    closest = part
+                                end
+                            end
                         end
                     end
                 end
@@ -597,44 +613,134 @@ local function getBestTarget()
     return closest
 end
 
--- Main Aimbot Loop
-local aimConnection
-function PrisonAPI:StartAimbot()
-    if self.Aimbot.Enabled then return end
-    self.Aimbot.Enabled = true
+-- Main aimbot loop
+local function StartAimbot()
+    if AimbotConnections.Main then return end
 
-    if aimConnection then aimConnection:Disconnect() end
-    aimConnection = RunService.RenderStepped:Connect(function()
-        if not self.Aimbot.Enabled then return end
+    AimbotConnections.Main = RunService.RenderStepped:Connect(function()
+        if not PrisonAPI.Aimbot.Enabled then return end
         if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
 
-        local target = getBestTarget()
+        local target = GetTarget()
         if target then
             local targetPos = target.Position
-            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), self.Aimbot.Smoothness)
+            Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPos), PrisonAPI.Aimbot.Smoothness)
         end
     end)
 
-    game:GetService("StarterGui"):SetCore("SendNotification",{
-        Title = "Prison API",
-        Text = "Aimbot Actived",
-        Duration = 3
-    })
+    AimbotConnections.FOV = RunService.Heartbeat:Connect(UpdateFOVCircle)
 end
 
-function PrisonAPI:StopAimbot()
-    if aimConnection then
-        aimConnection:Disconnect()
-        aimConnection = nil
+local function StopAimbot()
+    for _, conn in pairs(AimbotConnections) do
+        if conn then conn:Disconnect() end
     end
-    self.Aimbot.Enabled = false
-
-    game:GetService("StarterGui"):SetCore("SendNotification",{
-        Title = "Prison API",
-        Text = "Aimbot Deactived",
-        Duration = 2
-    })
+    AimbotConnections = {}
+    FOVCircle.Visible = false
 end
+
+-- Toggle handler
+local function SetAimbotEnabled(state)
+    PrisonAPI.Aimbot.Enabled = state
+    if state then
+        StartAimbot()
+    else
+        StopAimbot()
+    end
+end
+
+-- Also update settings when changed
+local function UpdateAimbotSettings()
+    if PrisonAPI.Aimbot.Enabled then
+        StopAimbot()
+        StartAimbot()
+    end
+    UpdateFOVCircle()
+end
+
+--esp
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+
+local TEAM_COLORS = {
+    Inmates = Color3.fromRGB(255, 138, 0),
+    Guards = Color3.fromRGB(0, 119, 255),
+    Criminals = Color3.fromRGB(255, 51, 51)
+}
+
+local function createBillboardDot(character, color)
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+
+    -- remove existing
+    local oldGui = head:FindFirstChild("HeadDotGui")
+    if oldGui then oldGui:Destroy() end
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "HeadDotGui"
+    billboard.Adornee = head
+    billboard.Size = UDim2.new(0, PrisonAPI.Dots.DotSize, 0, PrisonAPI.Dots.DotSize)
+    billboard.StudsOffset = Vector3.new(0, PrisonAPI.Dots.OffsetY, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = head
+
+    local outline = Instance.new("Frame")
+    outline.Size = UDim2.new(1,0,1,0)
+    outline.BackgroundColor3 = PrisonAPI.Dots.OutlineColor
+    outline.BackgroundTransparency = PrisonAPI.Dots.OutlineTrans
+    outline.BorderSizePixel = 0
+    outline.Parent = billboard
+
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.new(0.6,0,0.6,0)
+    fill.Position = UDim2.new(0.2,0,0.2,0)
+    fill.BackgroundColor3 = color
+    fill.BackgroundTransparency = PrisonAPI.Dots.FillTrans
+    fill.BorderSizePixel = 0
+    fill.AnchorPoint = Vector2.new(0.5,0.5)
+    fill.Position = UDim2.new(0.5,0,0.5,0)
+    fill.Parent = billboard
+end
+
+local function updateDot(player)
+    if player == LocalPlayer then return end
+    if not player.Character or not player.Team then return end
+    local color = TEAM_COLORS[player.Team.Name]
+    if not color then return end
+
+    if PrisonAPI.Dots.Enabled then
+        createBillboardDot(player.Character, color)
+    else
+        local head = player.Character:FindFirstChild("Head")
+        if head then
+            local old = head:FindFirstChild("HeadDotGui")
+            if old then old:Destroy() end
+        end
+    end
+end
+
+local function onPlayer(player)
+    player.CharacterAdded:Connect(function()
+        task.wait(0.1)
+        updateDot(player)
+    end)
+end
+
+for _, p in ipairs(Players:GetPlayers()) do
+    onPlayer(p)
+    updateDot(p)
+end
+Players.PlayerAdded:Connect(onPlayer)
+
+-- continuously update visibility for toggling
+RunService.RenderStepped:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            updateDot(player)
+        end
+    end
+end)
 --esp
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer

@@ -22,6 +22,8 @@ local PrisonAPI = {
     AutoArrest = false,
     AutoAttack = false,
     AutoRespawn = false,
+	AutoOpenDoors = false,
+	InfiniteJump = false,
     --TPWALK
     TpWalkEnabled = false,
     TpStepSize = 0.25,
@@ -58,6 +60,13 @@ local PrisonAPI = {
         Connection = nil
     }
 }
+--inf jump
+game:GetService("UserInputService").JumpRequest:connect(function()
+	if PrisonAPI.InfiniteJump then
+		game:GetService"Players".LocalPlayer.Character:FindFirstChildOfClass'Humanoid':ChangeState("Jumping")
+	end
+end)
+
 
 local function getGiverPosition(giver)
     if giver:IsA("Model") then
@@ -416,7 +425,7 @@ game.Players.LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 --no anti jump
-function PrisonAPI:NoAntiJump()
+function PrisonAPI.NoAntiJump()
     local PL = game:GetService("Players").LocalPlayer
     local PC = pcall
 
@@ -434,36 +443,102 @@ function PrisonAPI:NoAntiJump()
         Text = "No Anti Jump Applied",
     })
 end
+--Auto open doors
+spawn(function()
+    local connection
+
+    local function start()
+        if connection then return end
+        connection = game:GetService("RunService").Heartbeat:Connect(function()
+            local char = game.Players.LocalPlayer.Character
+            if not char or not char:FindFirstChild("Humanoid") or char.Humanoid.Health <= 0 then return end
+
+            local arm = char:FindFirstChild("Right Arm") or char:FindFirstChild("RightHand")
+            if not arm then return end
+
+            for _, door in pairs(workspace.Doors:GetDescendants()) do
+                if door.Name == "hitbox" and door:IsA("BasePart") then
+                    firetouchinterest(arm, door, 0)
+                    firetouchinterest(arm, door, 1)
+                end
+            end
+        end)
+    end
+
+    local function stop()
+        if connection then
+            connection:Disconnect()
+            connection = nil
+        end
+    end
+
+    -- Auto control based on toggle
+    while true do
+        if PrisonAPI.AutoOpenDoors then
+            start()
+        else
+            stop()
+        end
+        task.wait(0.3)
+    end
+end)
 --workspace
-function PrisonAPI:EscapePrison()
+function PrisonAPI.EscapePrison()
     instantTP(CFrame.new(-927.7, 94.1, 2055.3))
 end
 
-function PrisonAPI:YardTP()
+function PrisonAPI.YardTP()
     instantTP(CFrame.new(791.5, 98, 2498.5))
 end
 
-function PrisonAPI:PoliceRoomTP()
+function PrisonAPI.PoliceRoomTP()
     instantTP(CFrame.new(837.9, 99.8, 2267.3))
 end
 
-function PrisonAPI:CrimBaseTP()
+function PrisonAPI.CrimBaseTP()
     instantTP(CFrame.new(-927.7, 94.1, 2055.3))
 end
 
-function PrisonAPI:DeleteDoors()
+function PrisonAPI.DeleteDoors()
     game.workspace.Doors:Destroy()
 end
 
-function PrisonAPI:DeleteCells()
+function PrisonAPI.DeleteCells()
     game.workspace.Prison_Cellblock:Destroy()
 end
 
-function PrisonAPI:DeleteCellsDoors()
+function PrisonAPI.DeleteCellsDoors()
     game.workspace.CellDoors:Destroy()
 end
 
-function PrisonAPI:Btools()
+function PrisonAPI.SpamOpenDoors()
+	local Teams = game:GetService("Teams")
+	local LocalPlayer = game.Players.LocalPlayer
+	local Character = LocalPlayer.Character
+	local CharPart = Character["Right Arm"]
+
+	local Doors = workspace.Doors
+	local Keycard = Character:FindFirstChild("Key card")
+
+	local function Touch(HitBox)
+		firetouchinterest(CharPart, HitBox, 0)
+		firetouchinterest(CharPart, HitBox, 1)
+	end
+
+	game:GetService("RunService").Heartbeat:Connect(function()
+		Character = LocalPlayer.Character
+		CharPart = Character["Right Arm"]
+		if Character.Humanoid.Health > 0 then
+			for i, Object in pairs(Doors:GetDescendants()) do
+				if Object.Name == "hitbox" then
+					task.spawn(Touch, Object)
+				end
+			end
+		end
+	end)
+end
+
+function PrisonAPI.Btools()
     backpack = game:GetService("Players").LocalPlayer.Backpack
 
     hammer = Instance.new("HopperBin")
@@ -487,7 +562,16 @@ function PrisonAPI:Btools()
     })
 end
 
-function PrisonAPI:BecomeCriminal()
+function PrisonAPI.GetAllTools()
+	for i,v in pairs (game.Players:GetChildren()) do
+		wait()
+			for i,b in pairs (v.Backpack:GetChildren()) do
+			b.Parent = game.Players.LocalPlayer.Backpack
+		end
+	end
+end
+
+function PrisonAPI.BecomeCriminal()
     local plr = game.Players.LocalPlayer
         local char = plr.Character
         if not char or not char:FindFirstChild("HumanoidRootPart") then
@@ -657,90 +741,6 @@ local function UpdateAimbotSettings()
     end
     UpdateFOVCircle()
 end
-
---esp
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
-
-local TEAM_COLORS = {
-    Inmates = Color3.fromRGB(255, 138, 0),
-    Guards = Color3.fromRGB(0, 119, 255),
-    Criminals = Color3.fromRGB(255, 51, 51)
-}
-
-local function createBillboardDot(character, color)
-    local head = character:FindFirstChild("Head")
-    if not head then return end
-
-    -- remove existing
-    local oldGui = head:FindFirstChild("HeadDotGui")
-    if oldGui then oldGui:Destroy() end
-
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "HeadDotGui"
-    billboard.Adornee = head
-    billboard.Size = UDim2.new(0, PrisonAPI.Dots.DotSize, 0, PrisonAPI.Dots.DotSize)
-    billboard.StudsOffset = Vector3.new(0, PrisonAPI.Dots.OffsetY, 0)
-    billboard.AlwaysOnTop = true
-    billboard.Parent = head
-
-    local outline = Instance.new("Frame")
-    outline.Size = UDim2.new(1,0,1,0)
-    outline.BackgroundColor3 = PrisonAPI.Dots.OutlineColor
-    outline.BackgroundTransparency = PrisonAPI.Dots.OutlineTrans
-    outline.BorderSizePixel = 0
-    outline.Parent = billboard
-
-    local fill = Instance.new("Frame")
-    fill.Size = UDim2.new(0.6,0,0.6,0)
-    fill.Position = UDim2.new(0.2,0,0.2,0)
-    fill.BackgroundColor3 = color
-    fill.BackgroundTransparency = PrisonAPI.Dots.FillTrans
-    fill.BorderSizePixel = 0
-    fill.AnchorPoint = Vector2.new(0.5,0.5)
-    fill.Position = UDim2.new(0.5,0,0.5,0)
-    fill.Parent = billboard
-end
-
-local function updateDot(player)
-    if player == LocalPlayer then return end
-    if not player.Character or not player.Team then return end
-    local color = TEAM_COLORS[player.Team.Name]
-    if not color then return end
-
-    if PrisonAPI.Dots.Enabled then
-        createBillboardDot(player.Character, color)
-    else
-        local head = player.Character:FindFirstChild("Head")
-        if head then
-            local old = head:FindFirstChild("HeadDotGui")
-            if old then old:Destroy() end
-        end
-    end
-end
-
-local function onPlayer(player)
-    player.CharacterAdded:Connect(function()
-        task.wait(0.1)
-        updateDot(player)
-    end)
-end
-
-for _, p in ipairs(Players:GetPlayers()) do
-    onPlayer(p)
-    updateDot(p)
-end
-Players.PlayerAdded:Connect(onPlayer)
-
--- continuously update visibility for toggling
-RunService.RenderStepped:Connect(function()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character then
-            updateDot(player)
-        end
-    end
-end)
 --esp
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
